@@ -148,6 +148,7 @@ func NewFactory(ctx context.Context, cfg Configuration, telset telemetry.Setting
 	basicAuth := f.config.Auth.Basic.Get()
 	if basicAuth != nil {
 		opts.Auth.Username = basicAuth.Username
+		opts.Auth.Password = string(basicAuth.Password)
 	}
 	if tlsCfg := f.config.TLS.Get(); tlsCfg != nil {
 		loaded, tlsErr := tlsCfg.LoadTLSConfig(ctx)
@@ -163,12 +164,14 @@ func NewFactory(ctx context.Context, cfg Configuration, telset telemetry.Setting
 
 	success := false
 	defer func() {
-		if success {
+		if !success {
 			_ = conn.Close()
 		}
 	}()
 
-	_ = conn.Ping(ctx)
+	if err = conn.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("failed to ping ClickHouse: %w", err)
+	}
 
 	if builder != nil {
 		if err := builder.build(ctx, conn); err != nil {
