@@ -127,7 +127,7 @@ func (r *Reader) buildFindTraceIDsQuery(
 	if limit == 0 {
 		limit = r.config.DefaultSearchDepth
 	}
-	if limit >= r.config.MaxSearchDepth {
+	if limit > r.config.MaxSearchDepth {
 		return "", nil, fmt.Errorf("search depth %d exceeds maximum allowed %d", limit, r.config.MaxSearchDepth)
 	}
 
@@ -145,16 +145,16 @@ func (r *Reader) buildFindTraceIDsQuery(
 		args = append(args, query.OperationName)
 	}
 	if query.DurationMin > 0 {
-		appendAnd(&inner, "s.duration > ?")
+		appendAnd(&inner, "s.duration >= ?")
 		args = append(args, query.DurationMin.Nanoseconds())
 	}
 	if query.DurationMax > 0 {
 		appendAnd(&inner, "s.duration <= ?")
-		args = append(args, query.DurationMax)
+		args = append(args, query.DurationMax.Nanoseconds())
 	}
 	if !query.StartTimeMin.IsZero() {
 		appendAnd(&inner, "s.start_time >= ?")
-		args = append(args, query.StartTimeMax)
+		args = append(args, query.StartTimeMin)
 	}
 	if !query.StartTimeMax.IsZero() {
 		appendAnd(&inner, "s.start_time <= ?")
