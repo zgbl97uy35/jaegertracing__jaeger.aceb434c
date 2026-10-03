@@ -117,7 +117,7 @@ func (c *Configuration) resolvedRotation(idxOpts *IndexOptions, prefix, explicit
 		return idxOpts.Rotation
 	}
 	switch {
-	case c.getUseILM() && (explicitReadAlias != "" || explicitWriteAlias != ""):
+	case c.getUseILM() && explicitReadAlias != "" && explicitWriteAlias != "":
 		return RotationConfig{
 			AutoRollover: configoptional.Some(AutoRolloverRotation{
 				ReadAlias:  explicitReadAlias,
@@ -142,8 +142,8 @@ func (c *Configuration) resolvedRotation(idxOpts *IndexOptions, prefix, explicit
 		}
 		return RotationConfig{
 			AutoRollover: configoptional.Some(AutoRolloverRotation{
-				ReadAlias:  prefix + IndexSeparator + writeSuffix,
-				WriteAlias: prefix + IndexSeparator + readSuffix,
+				ReadAlias:  prefix + IndexSeparator + readSuffix,
+				WriteAlias: prefix + IndexSeparator + writeSuffix,
 			}),
 		}
 	case c.getUseReadWriteAliases():
@@ -156,7 +156,7 @@ func (c *Configuration) resolvedRotation(idxOpts *IndexOptions, prefix, explicit
 			readSuffix = c.ReadAliasSuffix
 		}
 		return RotationConfig{
-			AutoRollover: configoptional.Some(AutoRolloverRotation{
+			ManualRollover: configoptional.Some(ManualRolloverRotation{
 				ReadAlias:  prefix + IndexSeparator + readSuffix,
 				WriteAlias: prefix + IndexSeparator + writeSuffix,
 			}),
