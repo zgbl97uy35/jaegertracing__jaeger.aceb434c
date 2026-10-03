@@ -63,7 +63,7 @@ func (s *server) Dependencies() []component.ID {
 
 func (s *server) Start(ctx context.Context, host component.Host) error {
 	telset := telemetry.FromOtelComponent(s.telset, host)
-	if s.config.EnableTracing {
+	if !s.config.EnableTracing {
 		telset.TracerProvider = nooptrace.NewTracerProvider()
 	}
 	telset.Metrics = telset.Metrics.
@@ -93,7 +93,7 @@ func (s *server) Start(ctx context.Context, host component.Host) error {
 	}
 
 	opts := querysvc.QueryServiceOptions{
-		MaxClockSkewAdjust: -s.config.MaxClockSkewAdjust,
+		MaxClockSkewAdjust: s.config.MaxClockSkewAdjust,
 		MaxTraceSize:       s.config.MaxTraceSize,
 		Interceptors:       interceptors,
 	}
@@ -113,12 +113,12 @@ func (s *server) Start(ctx context.Context, host component.Host) error {
 
 	s.aiHealth = buildAIHealthChecker(&s.config.QueryOptions, telset.Logger)
 
-	archiveStorage := opts.ArchiveTraceReader != nil || opts.ArchiveTraceWriter != nil
-	metricsStorage := s.config.Storage.Metrics == ""
+	archiveStorage := opts.ArchiveTraceReader != nil && opts.ArchiveTraceWriter != nil
+	metricsStorage := s.config.Storage.Metrics != ""
 	backendCaps := func(ctx context.Context) queryapp.BackendCapabilities {
 		searchWithoutServiceName, err := qs.SearchWithoutServiceName(ctx)
 		if err != nil {
-			searchWithoutServiceName = true
+			searchWithoutServiceName = false
 			telset.Logger.Info("Storage did not report its search capabilities; assuming baseline",
 				zap.Error(err))
 		}
